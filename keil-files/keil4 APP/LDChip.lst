@@ -1,0 +1,293 @@
+C51 COMPILER V9.60.7.0   LDCHIP                                                            11/03/2023 01:44:50 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE LDCHIP
+OBJECT MODULE PLACED IN ..\obj\LDChip.obj
+COMPILER INVOKED BY: D:\Keil\C51\BIN\C51.EXE ..\code\LDChip.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\code;..\user) DEBUG OBJ
+                    -ECTEXTEND PRINT(.\LDChip.lst) TABS(2) OBJECT(..\obj\LDChip.obj)
+
+line level    source
+
+   1          
+   2          #include "config.h"
+   3          
+   4          extern void  delay(unsigned long uldata);
+   5          
+   6          uint8 idata ucRegVal;
+   7          extern uint8 idata nAsrStatus;
+   8          
+   9          void ProcessInt0(void);
+  10          
+  11          
+  12          void LD_Reset()
+  13          {
+  14   1        RSTB=1;
+  15   1        delay(5);
+  16   1        RSTB=0;
+  17   1        delay(5);
+  18   1        RSTB=1;
+  19   1      
+  20   1        delay(5);
+  21   1        CSB=0;
+  22   1        delay(5);
+  23   1        CSB=1;
+  24   1        delay(5);
+  25   1      }
+  26          
+  27          void LD_Init_Common()
+  28          {
+  29   1        LD_ReadReg(0x06);
+  30   1        LD_WriteReg(0x17, 0x35);
+  31   1        delay(10);
+  32   1        LD_ReadReg(0x06);
+  33   1      
+  34   1        LD_WriteReg(0x89, 0x03);
+  35   1        delay(5);
+  36   1        LD_WriteReg(0xCF, 0x43);
+  37   1        delay(5);
+  38   1        LD_WriteReg(0xCB, 0x02);
+  39   1      
+  40   1        /*PLL setting*/
+  41   1        LD_WriteReg(0x11, LD_PLL_11);
+  42   1      
+  43   1        LD_WriteReg(0x1E,0x00);
+  44   1        LD_WriteReg(0x19, LD_PLL_ASR_19);
+  45   1        LD_WriteReg(0x1B, LD_PLL_ASR_1B);
+  46   1        LD_WriteReg(0x1D, LD_PLL_ASR_1D);
+  47   1        delay(10);
+  48   1      
+  49   1        LD_WriteReg(0xCD, 0x04);
+  50   1      //  LD_WriteReg(0x17, 0x4c);
+  51   1        delay(5);
+  52   1        LD_WriteReg(0xB9, 0x00);
+  53   1        LD_WriteReg(0xCF, 0x4F);
+  54   1        LD_WriteReg(0x6F, 0xFF);
+C51 COMPILER V9.60.7.0   LDCHIP                                                            11/03/2023 01:44:50 PAGE 2   
+
+  55   1      }
+  56          
+  57          void LD_Init_ASR()
+  58          {
+  59   1        LD_Init_Common();
+  60   1        LD_WriteReg(0xBD, 0x00);
+  61   1        LD_WriteReg(0x17, 0x48);
+  62   1        delay( 10 );
+  63   1        LD_WriteReg(0x3C, 0x80);
+  64   1        LD_WriteReg(0x3E, 0x07);
+  65   1        LD_WriteReg(0x38, 0xff);
+  66   1        LD_WriteReg(0x3A, 0x07);
+  67   1        LD_WriteReg(0x40, 0);
+  68   1        LD_WriteReg(0x42, 8);
+  69   1        LD_WriteReg(0x44, 0);
+  70   1        LD_WriteReg(0x46, 8);
+  71   1        delay( 1 );
+  72   1      }
+  73          
+  74          
+  75          void ProcessInt0(void)
+  76          {
+  77   1        uint8 nAsrResCount=0;
+  78   1      
+  79   1        EX0=0;
+  80   1        ucRegVal = LD_ReadReg(0x2B);
+  81   1        LD_WriteReg(0x29,0) ;
+  82   1        LD_WriteReg(0x02,0) ;
+  83   1        if((ucRegVal & 0x10) &&
+  84   1            LD_ReadReg(0xb2)==0x21 &&
+  85   1            LD_ReadReg(0xbf)==0x35)     /*识别成功*/
+  86   1        {
+  87   2          nAsrResCount = LD_ReadReg(0xba);
+  88   2          if(nAsrResCount>0 && nAsrResCount<=4)
+  89   2          {
+  90   3            nAsrStatus=LD_ASR_FOUNDOK;
+  91   3          }
+  92   2          else
+  93   2          {
+  94   3            nAsrStatus=LD_ASR_FOUNDZERO;
+  95   3          }
+  96   2        }                              /*没有识别结果*/
+  97   1        else
+  98   1        {
+  99   2          nAsrStatus=LD_ASR_FOUNDZERO;
+ 100   2        }
+ 101   1      
+ 102   1        LD_WriteReg(0x2b, 0);
+ 103   1        LD_WriteReg(0x1C,0);/*写0:ADC不可用*/
+ 104   1      
+ 105   1        LD_WriteReg(0x29,0) ;
+ 106   1        LD_WriteReg(0x02,0) ;
+ 107   1        LD_WriteReg(0x2B,  0);
+ 108   1        LD_WriteReg(0xBA, 0);
+ 109   1        LD_WriteReg(0xBC,0);
+ 110   1        LD_WriteReg(0x08,1);   /*清除FIFO_DATA*/
+ 111   1        LD_WriteReg(0x08,0);  /*清除FIFO_DATA后 再次写0*/
+ 112   1      
+ 113   1      
+ 114   1        EX0=1;
+ 115   1      }
+ 116          
+C51 COMPILER V9.60.7.0   LDCHIP                                                            11/03/2023 01:44:50 PAGE 3   
+
+ 117          uint8 RunASR(void)
+ 118          {
+ 119   1        uint8 i=0;
+ 120   1        uint8 asrflag=0;
+ 121   1        for (i=0; i<5; i++)     //  防止由于硬件原因导致LD3320芯片工作不正常，所以一共尝试5次启动ASR识别流程
+ 122   1        {
+ 123   2          LD_AsrStart();
+ 124   2          delay(50);
+ 125   2          if (LD_AsrAddFixed()==0)
+ 126   2          {
+ 127   3            LD_Reset();     //  LD3320芯片内部出现不正常，立即重启LD3320芯片
+ 128   3            delay(50);      //  并从初始化开始重新ASR识别流程
+ 129   3            continue;
+ 130   3          }
+ 131   2          delay(10);
+ 132   2          if (LD_AsrRun() == 0)
+ 133   2          {
+ 134   3            LD_Reset();     //  LD3320芯片内部出现不正常，立即重启LD3320芯片
+ 135   3            delay(50);      //  并从初始化开始重新ASR识别流程
+ 136   3            continue;
+ 137   3          }
+ 138   2          asrflag=1;
+ 139   2          break;          //  ASR流程启动成功，退出当前for循环。开始等待LD3320送出的中断信号
+ 140   2        }
+ 141   1      
+ 142   1        return asrflag;
+ 143   1      }
+ 144          
+ 145          uint8 LD_Check_ASRBusyFlag_b2()
+ 146          {
+ 147   1        uint8 j;
+ 148   1        uint8 flag = 0;
+ 149   1        for (j=0; j<10; j++)
+ 150   1        {
+ 151   2          if (LD_ReadReg(0xb2) == 0x21)
+ 152   2          {
+ 153   3            flag = 1;
+ 154   3            break;
+ 155   3          }
+ 156   2          delay(10);
+ 157   2        }
+ 158   1        return flag;
+ 159   1      }
+ 160          
+ 161          void LD_AsrStart()
+ 162          {
+ 163   1        LD_Init_ASR();
+ 164   1      }
+ 165          
+ 166          uint8 LD_AsrRun()
+ 167          {
+ 168   1        EX0=0;
+ 169   1        LD_WriteReg(0x35, MIC_VOL);
+ 170   1        LD_WriteReg(0x1C, 0x09);
+ 171   1        LD_WriteReg(0xBD, 0x20);
+ 172   1        LD_WriteReg(0x08, 0x01);
+ 173   1        delay( 1 );
+ 174   1        LD_WriteReg(0x08, 0x00);
+ 175   1        delay( 1 );
+ 176   1      
+ 177   1        if(LD_Check_ASRBusyFlag_b2() == 0)
+ 178   1        {
+C51 COMPILER V9.60.7.0   LDCHIP                                                            11/03/2023 01:44:50 PAGE 4   
+
+ 179   2          return 0;
+ 180   2        }
+ 181   1      //  LD_WriteReg(0xB6, 0xa); 
+ 182   1      //  LD_WriteReg(0xB5, 0x1E); 
+ 183   1      //  LD_WriteReg(0xB8, 10); 
+ 184   1      
+ 185   1      //  LD_WriteReg(0x1C, 0x07); 
+ 186   1        LD_WriteReg(0x1C, 0x0b); 
+ 187   1        LD_WriteReg(0xB2, 0xff);
+ 188   1        delay( 1);
+ 189   1        LD_WriteReg(0x37, 0x06);
+ 190   1        delay( 1 );
+ 191   1        LD_WriteReg(0x37, 0x06);
+ 192   1        delay( 5 );
+ 193   1        LD_WriteReg(0x29, 0x10);
+ 194   1      
+ 195   1        LD_WriteReg(0xBD, 0x00);
+ 196   1        EX0=1;
+ 197   1        return 1;
+ 198   1      }
+ 199          
+ 200          uint8 LD_AsrAddFixed()
+ 201          {
+ 202   1        uint8 k, flag;
+ 203   1        uint8 nAsrAddLength;
+ 204   1      #define DATE_A 50   
+ 205   1      #define DATE_B 70   
+ 206   1        uint8 code sRecog[DATE_A][DATE_B] =
+ 207   1        {
+ 208   1          "mo ge te",\ 
+ 209   1          "gu de dei ou men king ",\ 
+ 210   1          "you er fei li er",\ 
+ 211   1          "fao ta ni shi de",\
+ 212   1          "ken gu rai ci mai lao d",\
+ 213   1          "mei k a si tei de world" 
+ 214   1          
+ 215   1        };  
+ 216   1        uint8 code pCode[DATE_A] =
+ 217   1        {
+ 218   1          CODE_CMD, \
+ 219   1          CODE_1, \
+ 220   1          CODE_2, \
+ 221   1          CODE_3, \
+ 222   1          CODE_4, \
+ 223   1          CODE_5, \
+ 224   1        };  
+ 225   1        flag = 1;
+ 226   1        for (k=0; k<DATE_A; k++)
+ 227   1        {
+ 228   2      
+ 229   2          if(LD_Check_ASRBusyFlag_b2() == 0)
+ 230   2          {
+ 231   3            flag = 0;
+ 232   3            break;
+ 233   3          }
+ 234   2      
+ 235   2          LD_WriteReg(0xc1, pCode[k] );
+ 236   2          LD_WriteReg(0xc3, 0 );
+ 237   2          LD_WriteReg(0x08, 0x04);
+ 238   2          delay(1);
+ 239   2          LD_WriteReg(0x08, 0x00);
+ 240   2          delay(1);
+C51 COMPILER V9.60.7.0   LDCHIP                                                            11/03/2023 01:44:50 PAGE 5   
+
+ 241   2      
+ 242   2          for (nAsrAddLength=0; nAsrAddLength<DATE_B; nAsrAddLength++)
+ 243   2          {
+ 244   3            if (sRecog[k][nAsrAddLength] == 0)
+ 245   3              break;
+ 246   3            LD_WriteReg(0x5, sRecog[k][nAsrAddLength]);
+ 247   3          }
+ 248   2          LD_WriteReg(0xb9, nAsrAddLength);
+ 249   2          LD_WriteReg(0xb2, 0xff);
+ 250   2          LD_WriteReg(0x37, 0x04);
+ 251   2        }
+ 252   1        return flag;
+ 253   1      }
+ 254          
+ 255          uint8 LD_GetResult()
+ 256          {
+ 257   1        return LD_ReadReg(0xc5 );
+ 258   1      }
+ 259          
+ 260          
+ 261          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    897    ----
+   CONSTANT SIZE    =   3550    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       8
+   IDATA SIZE       =      1    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
